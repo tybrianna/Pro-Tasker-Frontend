@@ -1,21 +1,20 @@
-import {
-  Link
-} from "react-router-dom";
+import { Link } from "react-router-dom";
+import ThemeToggle from "./ThemeToggle";
 
-function Navbar() {
+export default function Navbar() {
   return (
-    <nav>
+    <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-900 shadow">
+      <div className="flex space-x-4">
+        <Link to="/" className="font-semibold">
+          Dashboard
+        </Link>
 
-      <Link to="/">
-        Dashboard
-      </Link>
+        <Link to="/login" className="font-medium text-sm text-gray-600 dark:text-gray-300">
+          Login
+        </Link>
+      </div>
 
-      <Link to="/login">
-        Login
-      </Link>
-
-    </nav>
+      <ThemeToggle />
+    </div>
   );
 }
-
-export default Navbar;
