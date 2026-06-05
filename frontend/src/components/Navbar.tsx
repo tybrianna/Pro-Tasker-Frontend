@@ -1,20 +1,29 @@
-import { Link } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar() {
   return (
-    <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-900 shadow">
-      <div className="flex space-x-4">
-        <Link to="/" className="font-semibold">
-          Dashboard
-        </Link>
+    <nav className="bg-white dark:bg-gray-800 shadow-md">
+      <div className="max-w-6xl mx-auto flex justify-between items-center p-4">
 
-        <Link to="/login" className="font-medium text-sm text-gray-600 dark:text-gray-300">
-          Login
-        </Link>
+        <h1 className="text-xl font-bold tracking-wide">
+          Project Manager
+        </h1>
+
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+
+          <button
+            onClick={() => {
+              localStorage.clear();
+              window.location.href = "/login";
+            }}
+            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+          >
+            Logout
+          </button>
+        </div>
+
       </div>
-
-      <ThemeToggle />
-    </div>
+    </nav>
   );
 }
