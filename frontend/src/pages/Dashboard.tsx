@@ -1,41 +1,105 @@
-import {
-  useEffect,
-  useState,
-} from "react";
-
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import API from "../services/api";
+import { Project } from "../types/Project";
 
-import {
-  Project,
-} from "../types/Project";
+const Dashboard = () => {
+  const [projects, setProjects] =
+    useState<Project[]>([]);
 
-function Dashboard() {
-  const [
-    projects,
-    setProjects,
-  ] = useState<Project[]>([]);
+  const [name, setName] =
+    useState("");
+
+  const [description,
+    setDescription] =
+    useState("");
+
+  const fetchProjects =
+    async () => {
+      try {
+        const res =
+          await API.get<Project[]>(
+            "/projects"
+          );
+
+        setProjects(res.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
   useEffect(() => {
     fetchProjects();
   }, []);
 
-  const fetchProjects =
-    async (): Promise<void> => {
-      const res =
-        await API.get<Project[]>(
-          "/projects"
+  const createProject =
+    async () => {
+      try {
+        await API.post(
+          "/projects",
+          {
+            name,
+            description,
+          }
         );
 
-      setProjects(
-        res.data
-      );
+        setName("");
+        setDescription("");
+
+        fetchProjects();
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+  const deleteProject =
+    async (id: string) => {
+      try {
+        await API.delete(
+          `/projects/${id}`
+        );
+
+        fetchProjects();
+      } catch (error) {
+        console.error(error);
+      }
     };
 
   return (
     <div>
       <h1>
-        My Projects
+        Project Dashboard
       </h1>
+
+      <h2>
+        Create Project
+      </h2>
+
+      <input
+        placeholder="Project Name"
+        value={name}
+        onChange={(e) =>
+          setName(e.target.value)
+        }
+      />
+
+      <input
+        placeholder="Description"
+        value={description}
+        onChange={(e) =>
+          setDescription(
+            e.target.value
+          )
+        }
+      />
+
+      <button
+        onClick={createProject}
+      >
+        Create
+      </button>
+
+      <hr />
 
       {projects.map(
         (project) => (
@@ -49,11 +113,27 @@ function Dashboard() {
             <p>
               {project.description}
             </p>
+
+            <Link
+              to={`/project/${project._id}`}
+            >
+              Open
+            </Link>
+
+            <button
+              onClick={() =>
+                deleteProject(
+                  project._id
+                )
+              }
+            >
+              Delete
+            </button>
           </div>
         )
       )}
     </div>
   );
-}
+};
 
 export default Dashboard;
