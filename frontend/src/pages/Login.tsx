@@ -36,9 +36,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 px-4">
+    <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-lg p-8">
+        <div className="glass rounded-3xl p-8 shadow-xl shadow-indigo-100/50 dark:shadow-indigo-950/50">
           <h1 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-2">
             Welcome Back
           </h1>

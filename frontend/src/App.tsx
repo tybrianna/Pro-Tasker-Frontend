@@ -9,9 +9,9 @@ import Register from "./pages/Register";
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="container mx-auto p-4">
+      <main className="flex flex-1 flex-col">
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

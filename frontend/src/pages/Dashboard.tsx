@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
+import { Link } from "react-router-dom";
 import api from "../api/axios";
 import ProjectCard from "../components/ProjectedCard";
+import { AuthContext } from "../context/AuthContext";
 
 const categories = [
   {
@@ -26,13 +28,24 @@ const categories = [
   },
 ];
 
+const GUEST_KEY = "guest_projects";
+const getGuestProjects = () => JSON.parse(localStorage.getItem(GUEST_KEY) || "[]");
+const saveGuestProjects = (p: any[]) => localStorage.setItem(GUEST_KEY, JSON.stringify(p));
+
 export default function Dashboard() {
+  const { user } = useContext(AuthContext);
+  const isGuest = !user;
+
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("To-Do");
   const [name, setName] = useState(categories[0].defaultName);
   const [error, setError] = useState("");
 
   const load = async () => {
+    if (isGuest) {
+      setProjects(getGuestProjects());
+      return;
+    }
     try {
       const res = await api.get("/projects");
       setProjects(res.data);
@@ -43,7 +56,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [isGuest]);
 
   const selectCategory = (category: string) => {
     const selected = categories.find((item) => item.value === category);
@@ -58,6 +71,23 @@ export default function Dashboard() {
       return;
     }
 
+    if (isGuest) {
+      const newProject = {
+        _id: `guest_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+        name: name.trim(),
+        description: selectedCategory,
+      };
+      saveGuestProjects([...getGuestProjects(), newProject]);
+      setError("");
+      setName(
+        selectedCategory === "Custom"
+          ? ""
+          : categories.find((c) => c.value === selectedCategory)?.defaultName || ""
+      );
+      load();
+      return;
+    }
+
     try {
       await api.post("/projects", {
         name: name.trim(),
@@ -67,8 +97,7 @@ export default function Dashboard() {
       setName(
         selectedCategory === "Custom"
           ? ""
-          : categories.find((item) => item.value === selectedCategory)
-              ?.defaultName || ""
+          : categories.find((item) => item.value === selectedCategory)?.defaultName || ""
       );
       load();
     } catch (error) {
@@ -78,12 +107,42 @@ export default function Dashboard() {
   };
 
   const remove = async (id: string) => {
+    if (isGuest) {
+      saveGuestProjects(getGuestProjects().filter((p: any) => p._id !== id));
+      localStorage.removeItem(`guest_tasks_${id}`);
+      load();
+      return;
+    }
     await api.delete(`/projects/${id}`);
     load();
   };
 
   return (
-    <div className="space-y-8 py-10">
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10">
+
+      {/* Guest banner */}
+      {isGuest && (
+        <div className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm dark:border-amber-800 dark:bg-amber-900/20">
+          <span className="text-amber-800 dark:text-amber-300">
+            👋 You're in guest mode — your lists are saved locally on this device.
+          </span>
+          <div className="flex gap-2">
+            <Link
+              to="/login"
+              className="rounded-xl bg-amber-600 px-3 py-1.5 font-semibold text-white transition hover:bg-amber-700"
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/register"
+              className="rounded-xl border border-amber-300 bg-white px-3 py-1.5 font-semibold text-amber-800 transition hover:bg-amber-50 dark:border-amber-700 dark:bg-transparent dark:text-amber-300"
+            >
+              Register
+            </Link>
+          </div>
+        </div>
+      )}
+
       <section className="rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 shadow-2xl p-10 border border-slate-200 dark:border-slate-700">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
@@ -131,6 +190,7 @@ export default function Dashboard() {
               className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && create()}
               placeholder="Give your list a name"
             />
           </div>
@@ -143,14 +203,20 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {error && <p className="mt-3 text-sm font-semibold text-red-600 dark:text-red-400">{error}</p>}
+        {error && (
+          <p className="mt-3 text-sm font-semibold text-red-600 dark:text-red-400">{error}</p>
+        )}
       </section>
 
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.2em] font-bold text-indigo-600 dark:text-indigo-400">📋 Saved lists</p>
-            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mt-2">Manage your lists</h2>
+            <p className="text-sm uppercase tracking-[0.2em] font-bold text-indigo-600 dark:text-indigo-400">
+              📋 Saved lists
+            </p>
+            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mt-2">
+              Manage your lists
+            </h2>
           </div>
         </div>
 

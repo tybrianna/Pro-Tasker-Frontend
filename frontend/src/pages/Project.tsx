@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api/axios";
 import TaskCard from "../components/TaskCard";
+import { AuthContext } from "../context/AuthContext";
 
 interface ProjectDetail {
   _id: string;
@@ -23,8 +24,17 @@ const statusOptions = [
   { value: "Blocked", label: "Blocked" },
 ];
 
+const getGuestTasks = (id: string): TaskItem[] =>
+  JSON.parse(localStorage.getItem(`guest_tasks_${id}`) || "[]");
+
+const saveGuestTasks = (id: string, tasks: TaskItem[]) =>
+  localStorage.setItem(`guest_tasks_${id}`, JSON.stringify(tasks));
+
 export default function Project() {
   const { id } = useParams();
+  const { user } = useContext(AuthContext);
+  const isGuest = !user;
+
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [title, setTitle] = useState("");
@@ -32,6 +42,12 @@ export default function Project() {
 
   const loadProject = async () => {
     if (!id) return;
+    if (isGuest) {
+      const stored = JSON.parse(localStorage.getItem("guest_projects") || "[]");
+      const found = stored.find((p: any) => p._id === id);
+      setProject(found || { _id: id, name: "My List", description: "Custom" });
+      return;
+    }
     try {
       const res = await api.get(`/projects/${id}`);
       setProject(res.data);
@@ -42,6 +58,10 @@ export default function Project() {
 
   const loadTasks = async () => {
     if (!id) return;
+    if (isGuest) {
+      setTasks(getGuestTasks(id));
+      return;
+    }
     try {
       const res = await api.get(`/tasks/project/${id}`);
       setTasks(res.data);
@@ -53,21 +73,31 @@ export default function Project() {
   useEffect(() => {
     loadProject();
     loadTasks();
-  }, [id]);
+  }, [id, isGuest]);
 
   const create = async () => {
     if (!title.trim()) {
       setError("Please enter a task title.");
       return;
     }
-
     if (!id) return;
 
-    try {
-      await api.post("/tasks", {
+    if (isGuest) {
+      const newTask: TaskItem = {
+        _id: `guest_task_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
         title: title.trim(),
-        projectId: id,
-      });
+        status: "To Do",
+        type: "Feature",
+      };
+      saveGuestTasks(id, [...getGuestTasks(id), newTask]);
+      setTitle("");
+      setError("");
+      loadTasks();
+      return;
+    }
+
+    try {
+      await api.post("/tasks", { title: title.trim(), projectId: id });
       setTitle("");
       setError("");
       loadTasks();
@@ -78,6 +108,15 @@ export default function Project() {
   };
 
   const updateTask = async (taskId: string, updates: Partial<{ title: string; status: string }>) => {
+    if (!id) return;
+    if (isGuest) {
+      const updated = getGuestTasks(id).map((t) =>
+        t._id === taskId ? { ...t, ...updates } : t
+      );
+      saveGuestTasks(id, updated);
+      loadTasks();
+      return;
+    }
     try {
       await api.put(`/tasks/${taskId}`, updates);
       loadTasks();
@@ -88,6 +127,12 @@ export default function Project() {
   };
 
   const removeTask = async (taskId: string) => {
+    if (!id) return;
+    if (isGuest) {
+      saveGuestTasks(id, getGuestTasks(id).filter((t) => t._id !== taskId));
+      loadTasks();
+      return;
+    }
     try {
       await api.delete(`/tasks/${taskId}`);
       loadTasks();
@@ -98,12 +143,12 @@ export default function Project() {
   };
 
   return (
-    <div className="space-y-8 py-10">
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10">
       <section className="rounded-3xl bg-white dark:bg-slate-900 shadow-lg p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-              Task list
+              {isGuest ? "Guest · Local only" : "Task list"}
             </p>
             <h1 className="mt-2 text-4xl font-semibold text-slate-900 dark:text-white">
               {project?.name || "Loading list..."}
@@ -122,6 +167,7 @@ export default function Project() {
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && create()}
                 placeholder="Write a task title"
               />
               <button
@@ -140,11 +186,16 @@ export default function Project() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-slate-500 dark:text-slate-400">Tasks</p>
-            <h2 className="text-3xl font-semibold text-slate-900 dark:text-white">Your task board</h2>
+            <h2 className="text-3xl font-semibold text-slate-900 dark:text-white">
+              Your task board
+            </h2>
           </div>
           <div className="flex flex-wrap gap-2 text-sm text-slate-500 dark:text-slate-400">
             {statusOptions.map((status) => (
-              <span key={status.value} className="rounded-full border border-slate-200 px-3 py-1 dark:border-slate-700">
+              <span
+                key={status.value}
+                className="rounded-full border border-slate-200 px-3 py-1 dark:border-slate-700"
+              >
                 {status.label}
               </span>
             ))}
