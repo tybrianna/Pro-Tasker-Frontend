@@ -1,196 +1,68 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
+import api from "../api/axios";
+import { useParams } from "react-router-dom";
 
-import {
-  useParams,
-} from "react-router-dom";
-
-import API from "../services/api";
-import { Task } from "../types/Task";
-
-const ProjectDetails = () => {
+export default function Project() {
   const { id } = useParams();
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [title, setTitle] = useState("");
 
-  const [tasks,
-    setTasks] =
-    useState<Task[]>([]);
-
-  const [title,
-    setTitle] =
-    useState("");
-
-  const [description,
-    setDescription] =
-    useState("");
-
-  const fetchTasks =
-    async () => {
-      try {
-        const res =
-          await API.get<Task[]>(
-            `/tasks/project/${id}`
-          );
-
-        setTasks(
-          res.data
-        );
-      } catch (error) {
-        console.error(error);
-      }
-    };
+  const load = async () => {
+    const res = await api.get(`/tasks/project/${id}`);
+    setTasks(res.data);
+  };
 
   useEffect(() => {
-    fetchTasks();
+    load();
   }, []);
 
-  const createTask =
-    async () => {
-      try {
-        await API.post(
-          "/tasks",
-          {
-            title,
-            description,
-            project: id,
-          }
-        );
+  const create = async () => {
+    await api.post("/tasks", {
+      title,
+      projectId: id,
+    });
 
-        setTitle("");
-        setDescription("");
+    setTitle("");
+    load();
+  };
 
-        fetchTasks();
-      } catch (error) {
-        console.error(error);
-      }
-    };
+  const update = async (taskId: string, status: string) => {
+    await api.put(`/tasks/${taskId}`, { status });
+    load();
+  };
 
-  const deleteTask =
-    async (
-      taskId: string
-    ) => {
-      try {
-        await API.delete(
-          `/tasks/${taskId}`
-        );
-
-        fetchTasks();
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-  const updateStatus =
-    async (
-      taskId: string,
-      status: string
-    ) => {
-      try {
-        await API.put(
-          `/tasks/${taskId}`,
-          { status }
-        );
-
-        fetchTasks();
-      } catch (error) {
-        console.error(error);
-      }
-    };
+  const remove = async (taskId: string) => {
+    await api.delete(`/tasks/${taskId}`);
+    load();
+  };
 
   return (
-    <div>
-      <h1>
-        Project Tasks
-      </h1>
+    <div className="p-10">
+      <h1 className="text-3xl mb-5">Tasks</h1>
 
-      <h2>
-        Create Task
-      </h2>
-
-      <input
-        placeholder="Task Title"
-        value={title}
-        onChange={(e) =>
-          setTitle(
-            e.target.value
-          )
-        }
-      />
-
-      <input
-        placeholder="Description"
-        value={description}
-        onChange={(e) =>
-          setDescription(
-            e.target.value
-          )
-        }
-      />
-
-      <button
-        onClick={createTask}
-      >
+      <input className="p-2 border" onChange={e => setTitle(e.target.value)} />
+      <button className="bg-green-500 text-white p-2 ml-2" onClick={create}>
         Add Task
       </button>
 
-      <hr />
+      <div className="mt-6 space-y-3">
+        {tasks.map(t => (
+          <div key={t._id} className="p-4 border rounded">
+            <h2>{t.title}</h2>
 
-      {tasks.map(
-        (task) => (
-          <div
-            key={task._id}
-          >
-            <h3>
-              {task.title}
-            </h3>
-
-            <p>
-              {task.description}
-            </p>
-
-            <p>
-              Status:
-              {" "}
-              {task.status}
-            </p>
-
-            <select
-              value={task.status}
-              onChange={(e) =>
-                updateStatus(
-                  task._id,
-                  e.target.value
-                )
-              }
-            >
-              <option>
-                To Do
-              </option>
-
-              <option>
-                In Progress
-              </option>
-
-              <option>
-                Done
-              </option>
+            <select onChange={e => update(t._id, e.target.value)} value={t.status}>
+              <option>To Do</option>
+              <option>In Progress</option>
+              <option>Done</option>
+              <option>Blocked</option>
             </select>
 
-            <button
-              onClick={() =>
-                deleteTask(
-                  task._id
-                )
-              }
-            >
+            <button className="text-red-500 ml-3" onClick={() => remove(t._id)}>
               Delete
             </button>
           </div>
-        )
-      )}
+        ))}
+      </div>
     </div>
   );
-};
-
-export default ProjectDetails;
+}
