@@ -1,139 +1,55 @@
 import { useEffect, useState } from "react";
+import api from "../api/axios";
 import { Link } from "react-router-dom";
-import API from "../services/api";
-import { Project } from "../types/Project";
 
-const Dashboard = () => {
-  const [projects, setProjects] =
-    useState<Project[]>([]);
+export default function Dashboard() {
+  const [projects, setProjects] = useState<any[]>([]);
+  const [name, setName] = useState("");
 
-  const [name, setName] =
-    useState("");
-
-  const [description,
-    setDescription] =
-    useState("");
-
-  const fetchProjects =
-    async () => {
-      try {
-        const res =
-          await API.get<Project[]>(
-            "/projects"
-          );
-
-        setProjects(res.data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
+  const load = async () => {
+    const res = await api.get("/projects");
+    setProjects(res.data);
+  };
 
   useEffect(() => {
-    fetchProjects();
+    load();
   }, []);
 
-  const createProject =
-    async () => {
-      try {
-        await API.post(
-          "/projects",
-          {
-            name,
-            description,
-          }
-        );
+  const create = async () => {
+    await api.post("/projects", { name });
+    setName("");
+    load();
+  };
 
-        setName("");
-        setDescription("");
-
-        fetchProjects();
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-  const deleteProject =
-    async (id: string) => {
-      try {
-        await API.delete(
-          `/projects/${id}`
-        );
-
-        fetchProjects();
-      } catch (error) {
-        console.error(error);
-      }
-    };
+  const remove = async (id: string) => {
+    await api.delete(`/projects/${id}`);
+    load();
+  };
 
   return (
-    <div>
-      <h1>
-        Project Dashboard
-      </h1>
+    <div className="p-10">
+      <h1 className="text-3xl mb-5">Projects</h1>
 
-      <h2>
-        Create Project
-      </h2>
-
-      <input
-        placeholder="Project Name"
-        value={name}
-        onChange={(e) =>
-          setName(e.target.value)
-        }
-      />
-
-      <input
-        placeholder="Description"
-        value={description}
-        onChange={(e) =>
-          setDescription(
-            e.target.value
-          )
-        }
-      />
-
-      <button
-        onClick={createProject}
-      >
+      <input className="p-2 border" placeholder="Project name" onChange={e => setName(e.target.value)} />
+      <button className="bg-blue-500 text-white p-2 ml-2" onClick={create}>
         Create
       </button>
 
-      <hr />
+      <div className="grid gap-4 mt-6">
+        {projects.map(p => (
+          <div key={p._id} className="p-4 border rounded">
+            <h2>{p.name}</h2>
 
-      {projects.map(
-        (project) => (
-          <div
-            key={project._id}
-          >
-            <h3>
-              {project.name}
-            </h3>
-
-            <p>
-              {project.description}
-            </p>
-
-            <Link
-              to={`/project/${project._id}`}
-            >
+            <Link className="text-blue-500" to={`/project/${p._id}`}>
               Open
             </Link>
 
-            <button
-              onClick={() =>
-                deleteProject(
-                  project._id
-                )
-              }
-            >
+            <button className="text-red-500 ml-4" onClick={() => remove(p._id)}>
               Delete
             </button>
           </div>
-        )
-      )}
+        ))}
+      </div>
     </div>
   );
-};
-
-export default Dashboard;
+}
