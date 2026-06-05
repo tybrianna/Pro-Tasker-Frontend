@@ -1,19 +1,33 @@
 import {
   createContext,
-  useState
+  useState,
+  ReactNode,
 } from "react";
 
+interface AuthContextType {
+  user: string | null;
+  login: (token: string) => void;
+  logout: () => void;
+}
+
 export const AuthContext =
-  createContext();
+  createContext<AuthContextType>(
+    {} as AuthContextType
+  );
+
+interface Props {
+  children: ReactNode;
+}
 
 export const AuthProvider = ({
-  children
-}) => {
-
+  children,
+}: Props) => {
   const [user, setUser] =
-    useState(null);
+    useState<string | null>(
+      localStorage.getItem("token")
+    );
 
-  const login = (token) => {
+  const login = (token: string) => {
     localStorage.setItem(
       "token",
       token
@@ -35,7 +49,7 @@ export const AuthProvider = ({
       value={{
         user,
         login,
-        logout
+        logout,
       }}
     >
       {children}
